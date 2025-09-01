@@ -1,0 +1,39 @@
+# Transformer Implementation from Scratch - Core Dependencies
+
+# Core deep learning framework (required)
+torch>=2.0.0
+
+# Testing framework (required for running tests)
+pytest>=7.0.0
+
+# Scientific computing (required for numerical operations)
+numpy>=1.21.0
+
+# Optional: Additional PyTorch components for extended functionality
+# torchvision>=0.15.0
+# torchaudio>=2.0.0
+
+# Optional: Enhanced testing capabilities
+# pytest-cov>=4.0.0
+# pytest-xdist>=3.0.0
+
+# Optional: Jupyter notebook support for exploration
+# jupyter>=1.0.0
+# ipykernel>=6.0.0
+
+# Optional: Visualization tools for attention patterns
+# matplotlib>=3.5.0
+# seaborn>=0.11.0
+
+# Optional: Progress bars and utilities
+# tqdm>=4.64.0
+
+# Optional: Configuration management
+# pyyaml>=6.0
+
+# Optional: Logging and monitoring
+# tensorboard>=2.10.0
+
+# Optional: Code quality tools
+# black>=22.0.0
+# flake8>=5.0.0
