@@ -241,7 +241,7 @@ This project welcomes contributions! Areas for improvement include:
 - ✅ **\*\***: Comprehensive test cove\*\*rage
 - ✅ \***\*PyTorch Comparison**: Validation against standar\*\*d implementation
 - ✅ **Documentation**: Detailed implementation explanations
-- 🔄 **Performance Optimization**: Ongoing improvements
+- 🔄 **Performance Optimization**: Ongoing improvemenit ts
 - 🔄 **Extended Testing**: Additional edge cases and scenarios
 
 ---
