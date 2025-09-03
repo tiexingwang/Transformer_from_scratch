@@ -67,7 +67,9 @@ Transformer
 
 ### **Key Validation Strategy**
 
-One of the project's core features is **comparing our implementation with PyTorch's official `nn.Transformer`**:
+All the features is \*\*comparing our implementation with PyTorch's official functions:
+
+1. `nn.Transformer`\*\*:
 
 ```python
 # Example from test_decoder.py
@@ -82,6 +84,39 @@ def test_decoder_equals_nn_transformer_decoder(self, nn_transformer_decoder):
     # Validate output shapes and numerical similarity
     assert output_custom.shape == output_pytorch.shape
     assert (output_custom - output_pytorch).abs().max() < 1.0
+```
+
+2. `nn.TransformerEncoder` and `nn.TransformerDecoder`:
+
+```python
+# Example from test_encoder.py
+def test_encoder_equals_nn_transformer_encoder(self, nn_transformer_encoder):
+    """Test if our encoder produces similar results to nn.TransformerEncoder"""
+    # Forward pass with our encoder
+    output_custom = self.encoder(x)
+
+    # Forward pass with PyTorch transformer encoder
+    output_pytorch = nn_transformer_encoder(src=x, src_key_padding_mask=None)
+
+    # Validate output shapes and numerical similarity
+    assert output_custom.shape == output_pytorch.shape
+    print(f"Output shapes match: {output_custom.shape}")
+
+# Example from test_decoder.py
+def test_decoder_equals_nn_transformer_decoder(self, nn_transformer_decoder):
+    """Test if our decoder produces similar results to nn.TransformerDecoder"""
+    # Forward pass with our decoder
+    output_custom = self.decoder(x, encoder_output, self.decoder_mask)
+
+    # Forward pass with PyTorch transformer decoder
+    causal_mask = torch.triu(torch.ones(seq_len, seq_len), diagonal=1).bool()
+    output_pytorch = nn_transformer_decoder(
+        tgt=x, memory=encoder_output, tgt_mask=causal_mask
+    )
+
+    # Validate output shapes and numerical similarity
+    assert output_custom.shape == output_pytorch.shape
+    print(f"Output shapes match: {output_custom.shape}")
 ```
 
 ### **Comparison Metrics**
@@ -116,6 +151,11 @@ python -m pytest tests/ -v
 # Run specific component tests
 python -m pytest tests/test_multi_head_attention.py -v
 python -m pytest tests/test_decoder.py -v
+python -m pytest tests/test_encoder.py -v
+python -m pytest tests/test_encoder_decoder_block.py -v
+python -m pytest tests/test_layer_norm.py -v
+python -m pytest tests/test_positional_encoder.py -v
+python -m pytest tests/test_positionwise_feed_forward.py -v
 
 # Run with detailed output
 python -m pytest tests/ -v -s
