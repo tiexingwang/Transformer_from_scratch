@@ -1,0 +1,5 @@
+Hello world	你好世界
+How are you	你好吗
+I love you	我爱你
+Good morning	早上好
+Thank you	谢谢
