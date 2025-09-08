@@ -3,12 +3,42 @@ from .vocabulary_builder import VocabularyBuilder
 # After building the vocabulary, we can use the vocabulary to tokenize the text.
 class Tokenizer:
     def __init__(self, vocab, max_length):
+        """
+        Initialize the Tokenizer
+        Args:
+            vocab: The vocabulary
+            max_length: The maximum length of the tokens
+        Returns:
+            None
+        For example:
+            vocab = {
+            {
+                "<pad>": 0,
+                "<unk>": 1,
+                "<bos>": 2,
+                "<eos>": 3,
+                "hello": 4,
+                "world": 5
+            } - come from the vocabulary builder
+            max_length = 10
+        """
         self.vocab = vocab
         self.max_length = max_length
+
+        # create a dictionary to map the index to the word when detokenize
         self.idx2word = {idx: word for word, idx in vocab.items()}
     
     def tokenize_english(self, text):
-        """Tokenize English text"""
+        """Tokenize English text, find the word in the vocabulary 
+           and return the index of the word, if the word is not in the vocabulary, return the index of the <unk>
+        Args:
+            text: The English text
+        Returns:
+            tokens: The tokens
+        For example:
+            text = "Hello world"
+            tokens = [2, 4, 5, 3]
+        """
 
         # split the text into words
         words = text.lower().split()
@@ -22,7 +52,16 @@ class Tokenizer:
         return tokens
     
     def tokenize_chinese(self, text):
-        """Tokenize Chinese text"""
+        """Tokenize Chinese text, find the character in the vocabulary 
+           and return the index of the character, if the character is not in the vocabulary, return the index of the <unk>
+        Args:
+            text: The Chinese text
+        Returns:
+            tokens: The tokens
+        For example:
+            text = "你好世界"
+            tokens = [2, 5, 6, 8, 3]
+        """
         # split the text into characters
         chars = list(text)
         # tokenize the characters
@@ -36,7 +75,15 @@ class Tokenizer:
     
     def tokenize(self, text):
 
-        """Tokenize text"""
+        """Tokenize text, if the text is Chinese, tokenize it as Chinese, if the text is English, tokenize it as English
+        Args:
+            text: The text
+        Returns:
+            tokens: The tokens
+        For example:
+            text = "你好世界"
+            tokens = [2, 5, 6, 8, 3]
+        """
 
         if not isinstance(text, str):
             raise ValueError("Invalid text type")
@@ -47,32 +94,75 @@ class Tokenizer:
             return self.tokenize_english(text)       
     
     def detect_language(self, text):
-        """Detect if text is Chinese or English"""
+        """Detect if text is Chinese or English
+        This is a simple way to detect the language of the text, but it is not very accurate
+        Args:
+            text: The text
+        Returns:
+            language: The language
+        """
         chinese_chars = sum(1 for char in text if '\u4e00' <= char <= '\u9fff')
         return 'chinese' if chinese_chars > len(text) * 0.3 else 'english'
 
     def add_special_tokens(self, tokens):
-        """Add special tokens to the tokens"""
+        """Add special tokens to the tokens to make the tokens start with <bos> and end with <eos>
+        Args:
+            tokens: The tokens
+        Returns:
+            tokens: The tokens with special tokens
+        """
         return [self.vocab["<bos>"]] + tokens + [self.vocab["<eos>"]]
     
     def pad_tokens(self, tokens, max_length):
-        """Pad the tokens to the max length"""
+        """Pad the tokens to the max length, if the tokens is less than the max length, pad the tokens with <pad>
+           This ensures that the token sequence matches the required max_length when input to the model
+        Args:
+            tokens: The tokens
+            max_length: The maximum length of the tokens
+        Returns:
+            tokens: The tokens with padding
+        """
         return tokens + [self.vocab["<pad>"]] * (max_length - len(tokens))
     
     def truncate_tokens(self, tokens, max_length):
-        """Truncate the tokens to the max length"""
+        """Truncate the tokens to the max length
+           This ensures that the token sequence matches the required max_length when input to the model
+        Args:
+            tokens: The tokens
+            max_length: The maximum length of the tokens
+        Returns:
+            tokens: The tokens with truncation
+        """
         return tokens[:max_length]
     
     def get_vocab_size(self):
-        """Get the vocabulary size"""
+        """Get the vocabulary size
+        Args:
+            None
+        Returns:
+            vocabulary_size: The vocabulary size
+        """
         return len(self.vocab)
-    
+
     def get_vocab(self):
-        """Get the vocabulary"""
+        """Get the vocabulary
+        Args:
+            None
+        Returns:
+            vocabulary: The vocabulary
+        """
         return self.vocab
     
     def tokenize_and_pad_and_truncate(self, text):
-        """Tokenize and pad the text"""
+        """Tokenize and pad the text
+        Args:
+            text: The text
+        Returns:
+            tokens: The tokens
+        For example:
+            text = "Hello world"
+            tokens = [2, 4, 5, 3, 0, 0, 0, 0, 0, 0]
+        """
         tokens = self.tokenize(text)
         tokens = self.add_special_tokens(tokens)
         tokens = self.pad_tokens(tokens, self.max_length)
@@ -80,12 +170,28 @@ class Tokenizer:
         return tokens
     
     def tokenize_and_pad_and_truncate_batch(self, texts):
-        """Tokenize and pad and truncate the batch of text"""
+        """Tokenize and pad and truncate the batch of text
+        Args:
+            texts: The texts
+        Returns:
+            tokens: The tokens
+        For example:
+            texts = ["Hello world", "Hello United kingdom"]
+            tokens = [[2, 4, 5, 3, 0, 0, 0, 0, 0, 0], [2, 4, 5, 3, 0, 0, 0, 0, 0, 0]]
+        """
         tokens = [self.tokenize_and_pad_and_truncate(text) for text in texts]
         return tokens
     
     def detokenize(self, tokens):
-        """Detokenize the tokens, skipping special tokens like <pad>, <bos>, <eos>."""
+        """Detokenize the tokens, skipping special tokens like <pad>, <bos>, <eos>.
+        Args:
+            tokens: The tokens
+        Returns:
+            detokenized_text: The detokenized text
+        For example:
+            tokens = [2, 4, 5, 3, 0, 0, 0, 0, 0, 0]
+            detokenized_text = "Hello world"
+        """
         detokenized_text = []
         for token in tokens:
             word = self.idx2word[token] if token in self.idx2word else self.idx2word["<unk>"]
@@ -96,7 +202,16 @@ class Tokenizer:
         return " ".join(detokenized_text)
     
     def detokenize_batch(self, tokens):
-        """Detokenize the batch of tokens"""
+        """Detokenize the batch of tokens
+        Args:
+            tokens: The tokens
+        Returns:
+            detokenized_text: The detokenized text
+        For example:
+        For example:
+            tokens = [[2, 4, 5, 3, 0, 0, 0, 0, 0, 0], [2, 4, 5, 3, 0, 0, 0, 0, 0, 0]]
+            detokenized_text = ["Hello world", "Hello United kingdom"]
+        """
         return [self.detokenize(token) for token in tokens]
 
 if __name__ == "__main__":

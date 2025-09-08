@@ -14,14 +14,26 @@ except ImportError:
 
 class TranslationDataset(Dataset):
     def __init__(self, source_file, vocabulary_builder, max_length=32):
+        """
+        Initialize the TranslationDataset
+        Args:
+            source_file: The path to the source file in txt format, each line is a pair of English and Chinese text separated by a tab
+            vocabulary_builder: The vocabulary builder
+            max_length: The maximum length of the tokens
+        Returns:
+            None
+        For example:
+            source_file = "data/sample.en-zh.txt"
+            vocabulary_builder = VocabularyBuilder(max_vocab_size=10000)
+            max_length = 32
+            TranslationDataset(source_file, vocabulary_builder, max_length)
+        """
         self.source_file = source_file
-
         self.max_length = max_length
-
         # build vocabulary
         self.vocab_builder = vocabulary_builder
 
-        # read data from file 
+        # read data from file and build vocabulary library
         self.english_texts, self.chinese_texts = self.vocab_builder.read_data_from_file(self.source_file)
         self.vocab_en, self.vocab_zh = self.vocab_builder.build_vocabulary(self.english_texts, self.chinese_texts)
 
@@ -29,14 +41,32 @@ class TranslationDataset(Dataset):
         self.tokenizer_en = Tokenizer(self.vocab_en, max_length=self.max_length)
         self.tokenizer_zh = Tokenizer(self.vocab_zh, max_length=self.max_length)
 
-        # tokenize the data
+        # tokenize the data and pad and truncate the data and return the tokens
         self.en_tokens = self.tokenizer_en.tokenize_and_pad_and_truncate_batch(self.english_texts)
         self.zh_tokens = self.tokenizer_zh.tokenize_and_pad_and_truncate_batch(self.chinese_texts)
 
     def __len__(self):
+        """Get the length of the dataset
+        Args:
+            None
+        Returns:
+            length: The length of the dataset
+        """
         return len(self.en_tokens)
 
     def __getitem__(self, idx):
+        """Get the item at the given index
+        Args:
+            idx: The index
+        Returns:
+            en_token: The English token
+            zh_token: The Chinese token
+        
+        For example:
+            idx = 0
+            en_token = torch.tensor([2, 4, 5, 3, 0, 0, 0, 0, 0, 0], dtype=torch.long)
+            zh_token = torch.tensor([2, 5, 6, 8, 3, 0, 0, 0, 0, 0], dtype=torch.long)
+        """
         return torch.tensor(self.en_tokens[idx], dtype=torch.long), torch.tensor(self.zh_tokens[idx], dtype=torch.long)
 
 
