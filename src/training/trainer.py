@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import sys
+import matplotlib.pyplot as plt
 from tqdm import trange
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 if project_root not in sys.path:
@@ -100,7 +101,8 @@ class Trainer:
         self.best_loss = float("inf")
         self.best_epoch = 0
         self.global_step = 0
-
+        self.training_losses = []
+        self.validation_losses = []
         # === Model Construction ===
         self.model = self._build_model(self.train_dataset)
         self.optimizer = self._build_optimizer()
@@ -271,7 +273,7 @@ class Trainer:
 
                 self.global_step += 1
                 epoch_loss += loss.item()
-
+                self.training_losses.append(loss.item())
                 if self.global_step % self.log_interval == 0:
                     self._log_training_progress(epoch, self.global_step, loss.item())
 
@@ -335,6 +337,7 @@ class Trainer:
                 target_labels = target[:, 1:]
                 logits = self.model(source, target_in)
                 loss = self.criterion(logits.reshape(-1, logits.size(-1)), target_labels.reshape(-1))
+                self.validation_losses.append(loss.item())
                 epoch_loss += loss.item()
         avg_loss = epoch_loss / max(1, len(self.val_dataloader))
         return avg_loss
@@ -355,6 +358,23 @@ class Trainer:
             if (next_id == eos).all():
                 break
         return tgt
+
+    # === Plotting ===
+    def _plot_training_loss(self):
+        """Plot the training progress."""
+        plt.plot(self.training_losses)
+        plt.xlabel("Epochs")
+        plt.ylabel("Loss")
+        plt.title("Training Loss")
+        plt.show()  
+    def _plot_validation_loss(self):
+        """Plot the validation progress."""
+        plt.plot(self.validation_losses)
+        plt.xlabel("Epochs")
+        plt.ylabel("Loss")
+        plt.title("Validation Loss")
+        plt.show()
+
 
     # === Public API ===
 
