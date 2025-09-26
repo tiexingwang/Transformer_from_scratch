@@ -35,7 +35,6 @@ class Trainer:
     #             - lr (float): Initial learning rate. Default: 1e-3
     #             - step_size (int): LR scheduler step. Default: 10
     #             - gamma (float): LR decay factor. Default: 0.1
-    #
     # Returns:
     #     None
     #
@@ -415,5 +414,3 @@ if __name__ == "__main__":
     print("Best model optimizer:", trainer.optimizer)
     print("Best model scheduler:", trainer.scheduler)
     print("Best model model:", trainer.model)
-    print("Best model dataloader:", trainer.dataloader)
-    print("Best model dataset:", trainer.dataset)
