@@ -381,10 +381,12 @@ class Trainer:
     def run(self):
         """Entry point to start training."""
         self._train()
+        self._plot_training_loss()
 
     def evaluate(self):
         """Evaluate the model on the validation set."""
-        return self._validate()
+        self._validate()
+        self._plot_validation_loss()
 
     def predict(self, src_batch: torch.Tensor, max_len: int = 64) -> torch.Tensor:
         """Generate predictions for a batch of source sentences."""
