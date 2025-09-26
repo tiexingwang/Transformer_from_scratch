@@ -18,39 +18,39 @@ from src.utils.tokenizer import Tokenizer
 from src.training.config import TrainerConfig
 
 class Trainer:
-    # The following is the class-level docstring for the Trainer class.
-    # It describes the purpose of the Trainer and its expected configuration.
-    #
-    # Args:
-    #     config (dict): Training configuration.
-    #         Required keys:
-    #             - train_dataset_path (str): Path to training data.
-    #             - val_dataset_path (str): Path to validation data.g
-    #             - max_length (int): Max tokens per sample.
-    #             - d_model (int): Model hidden size (must be divisible by n_heads).
-    #             - n_heads (int): Number of attention heads.
-    #             - batch_size (int): Batch size.
-    #             - num_epochs (int): Number of epochs.
-    #         Optional keys:
-    #             - dropout (float): Dropout rate. Default: 0.1
-    #             - lr (float): Initial learning rate. Default: 1e-3
-    #             - step_size (int): LR scheduler step. Default: 10
-    #             - gamma (float): LR decay factor. Default: 0.1
-    # Returns:
-    #     None
-    #
-    # Example:
-    #     config = {
-    #         "train_dataset_path": "data/train.en-zh.txt",
-    #         "val_dataset_path": "data/val.en-zh.txt",
-    #         "max_length": 32,
-    #         "d_model": 512,
-    #         "n_heads": 8,
-    #         "batch_size": 32,
-    #         "num_epochs": 10,
-    #     }
-    #     trainer = Trainer(config)
-    def __init__(self, config:dict):
+    """Trainer class for training and evaluating a Transformer-based translation model.
+
+    Args:
+        config (dict): Training configuration.
+            Required keys:
+                - train_dataset_path (str): Path to training data.
+                - val_dataset_path (str): Path to validation data.
+                - max_length (int): Max tokens per sample.
+                - d_model (int): Model hidden size (must be divisible by n_heads).
+                - n_heads (int): Number of attention heads.
+                - batch_size (int): Batch size.
+                - num_epochs (int): Number of epochs.
+            Optional keys:
+                - dropout (float): Dropout rate. Default: 0.1
+                - lr (float): Initial learning rate. Default: 1e-3
+                - step_size (int): LR scheduler step. Default: 10
+                - gamma (float): LR decay factor. Default: 0.1
+
+    Example:
+        config = {
+            "train_dataset_path": "data/train.en-zh.txt",
+            "val_dataset_path": "data/val.en-zh.txt",
+            "max_length": 32,
+            "d_model": 512,
+            "n_heads": 8,
+            "batch_size": 32,
+            "num_epochs": 10,
+        }
+        trainer = Trainer(config)
+    """
+
+    def __init__(self, config: dict):
+        """Initializes the Trainer with the given configuration."""
         # === Config parameters ===
         self.config = self._build_config(config)
 
@@ -87,15 +87,19 @@ class Trainer:
         self.vocabulary_builder = self._build_vocabulary(self.max_vocab_size)
 
         # === Dataset Construction ===
-        self.train_dataset = self._build_train_dataset(self.train_dataset_path, self.max_length, self.vocabulary_builder)
-        self.val_dataset = self._build_val_dataset(self.val_dataset_path, self.max_length, self.vocabulary_builder)
+        self.train_dataset = self._build_train_dataset(
+            self.train_dataset_path, self.max_length, self.vocabulary_builder)
+        self.val_dataset = self._build_val_dataset(
+            self.val_dataset_path, self.max_length, self.vocabulary_builder)
 
         # === Pad ID Construction ===
         self.pad_id = self.train_dataset.vocab_zh["<pad>"]
 
         # === Dataloader Construction ===
-        self.train_dataloader = self._build_train_dataloader(self.train_dataset, self.batch_size, self.shuffle)
-        self.val_dataloader = self._build_val_dataloader(self.val_dataset, getattr(self.config, "val_batch_size", self.batch_size), False)
+        self.train_dataloader = self._build_train_dataloader(
+            self.train_dataset, self.batch_size, self.shuffle)
+        self.val_dataloader = self._build_val_dataloader(
+            self.val_dataset, getattr(self.config, "val_batch_size", self.batch_size), False)
 
         # === Best Loss Construction ===
         self.best_loss = float("inf")
@@ -103,37 +107,47 @@ class Trainer:
         self.global_step = 0
         self.training_losses = []
         self.validation_losses = []
+
         # === Model Construction ===
         self.model = self._build_model(self.train_dataset)
         self.optimizer = self._build_optimizer()
         self.criterion = self._build_criterion()
         self.scheduler = self._build_scheduler()
 
-    # === Config and Device Utilities ===
+    # =========================
+    # Config and Device Methods
+    # =========================
+
     def _build_config(self, config):
-        # This method builds and validates the configuration object.
-        # It accepts either a dictionary or an argparse.Namespace as input.
-        # The purpose is to allow configuration from the command line or a user-defined config file.
-        # It returns a TrainerConfig object, which standardizes the configuration for the Trainer.
+        """Builds and validates the configuration object.
+
+        Accepts either a dictionary or an argparse.Namespace as input.
+        Returns a TrainerConfig object.
+        """
         if hasattr(config, "__dict__"):
             return TrainerConfig(**vars(config))
         return TrainerConfig(**config)
 
     def _get_device(self):
-        """Select the device (GPU or CPU) for training."""
+        """Selects the device (GPU or CPU) for training."""
         gpu_id = self.config.gpu_id
         if torch.cuda.is_available():
             return torch.device(f"cuda:{gpu_id}")
         return torch.device("cpu")
 
-    # === Vocabulary and Dataset Construction ===
+    # =========================
+    # Vocabulary and Dataset Methods
+    # =========================
+
     def _build_vocabulary(self, max_vocab_size=10000):
-        """Construct the vocabulary builder.
-        in our case, we use the whole context of the dataset to build the vocabulary """
+        """Constructs the vocabulary builder.
+
+        Uses the whole context of the dataset to build the vocabulary.
+        """
         return VocabularyBuilder(max_vocab_size=max_vocab_size)
 
     def _build_train_dataset(self, dataset_path, max_length=32, vocabulary_builder=None):
-        """Create the training dataset."""
+        """Creates the training dataset."""
         if vocabulary_builder is None:
             raise ValueError("vocabulary_builder is required")
         if dataset_path is None:
@@ -145,7 +159,7 @@ class Trainer:
         )
 
     def _build_val_dataset(self, dataset_path, max_length=32, vocabulary_builder=None):
-        """Create the validation dataset."""
+        """Creates the validation dataset."""
         if vocabulary_builder is None:
             raise ValueError("vocabulary_builder is required")
         return TranslationDataset(
@@ -154,9 +168,12 @@ class Trainer:
             max_length=max_length
         )
 
-    # === DataLoader Construction ===
+    # =========================
+    # DataLoader Methods
+    # =========================
+
     def _build_train_dataloader(self, dataset, batch_size=32, shuffle=True):
-        """Create the DataLoader for training."""
+        """Creates the DataLoader for training."""
         return DataLoader(
             dataset,
             batch_size=batch_size,
@@ -166,7 +183,7 @@ class Trainer:
         )
 
     def _build_val_dataloader(self, dataset, batch_size=32, shuffle=True):
-        """Create the DataLoader for validation."""
+        """Creates the DataLoader for validation."""
         return DataLoader(
             dataset,
             batch_size=batch_size,
@@ -175,48 +192,44 @@ class Trainer:
             pin_memory=True,
         )
 
-    # === Model and Optimizer Construction ===
+    # =========================
+    # Model and Optimizer Methods
+    # =========================
+
     def _build_model(self, dataset):
-        """Instantiate the Transformer model.
-        This is the main model of the Transformer architecture.
-        It is a encoder-decoder model.
-        The encoder is a stack of Transformer encoder layers.
-        The decoder is a stack of Transformer decoder layers.
-        The encoder and decoder are connected by an attention mechanism.
+        """Instantiates the Transformer model.
+
+        Returns:
+            Transformer: The main model of the Transformer architecture.
         """
         return Transformer(
-            input_vocab_size=len(dataset.vocab_en),#input
-            output_vocab_size=len(dataset.vocab_zh),#target
-            d_model=self.d_model,#lenght of the input vector
-            n_heads=self.n_heads,#number of heads in the multi-head attention
-            n_layers=self.n_layers,#number of transformer blocks in the encoder and decoder
-            d_ff=self.d_ff,#lenght of the feedforward network
-            dropout=self.dropout,#dropout rate
-            max_seq_len=self.max_length#maximum sequence length
+            input_vocab_size=len(dataset.vocab_en),
+            output_vocab_size=len(dataset.vocab_zh),
+            d_model=self.d_model,
+            n_heads=self.n_heads,
+            n_layers=self.n_layers,
+            d_ff=self.d_ff,
+            dropout=self.dropout,
+            max_seq_len=self.max_length
         ).to(self.device)
 
     def _build_optimizer(self):
-        """here we use Adam optimizer as this is a good optimizer for Transformer"""
-
+        """Creates the Adam optimizer for the Transformer model."""
         return optim.Adam(self.model.parameters(), lr=self.lr)
 
     def _build_criterion(self):
-        """Create the loss function. only compared the output of the model and the target when the target is not the pad id"""
+        """Creates the loss function.
+
+        Only compares the output of the model and the target when the target is not the pad id.
+        """
         return nn.CrossEntropyLoss(ignore_index=self.pad_id)
 
     def _build_scheduler(self):
-        """
-        Create and return a learning rate scheduler for the optimizer.
-
-        Here we use StepLR, which reduces the learning rate by a factor of 'gamma'
-        every 'step_size' epochs. This helps the model converge by lowering the learning
-        rate as training progresses.
+        """Creates and returns a learning rate scheduler for the optimizer.
 
         Returns:
             torch.optim.lr_scheduler.StepLR: The learning rate scheduler.
         """
-        # StepLR is a common scheduler for Transformers. It helps prevent the optimizer
-        # from overshooting minima by reducing the learning rate at set intervals.
         scheduler = optim.lr_scheduler.StepLR(
             self.optimizer,
             step_size=self.step_size,
@@ -224,7 +237,9 @@ class Trainer:
         )
         return scheduler
 
-    # === Training Loop ===
+    # =========================
+    # Training Loop
+    # =========================
 
     def _train(self):
         """Main training loop."""
@@ -238,37 +253,24 @@ class Trainer:
                 source = source.to(self.device)
                 target = target.to(self.device)
 
-                # Teacher Forcing: During training, we want the model to learn to predict the next word.
-                # To do this, we split the target sequence (target) into two parts:
-                # target_in is the part fed into the model (removing the last word),
-                # target_labels is what we want the model to predict (removing the first word).
-                # This way, at each step, the model uses the real previous words to predict the next word.
-                # For example, if target = [BOS, "I", "love", "you", EOS]
-                # then target_in = [BOS, "I", "love", "you"]
-                #      target_labels = ["I", "love", "you", EOS]
-                target_in = target[:, :-1]      # Input to the model (remove last word)
-                target_labels = target[:, 1:]   # Expected output (remove first word)
-
+                # Teacher Forcing: split target into input and labels
+                target_in = target[:, :-1]
+                target_labels = target[:, 1:]
 
                 logits = self.model(source, target_in)
                 loss = self.criterion(
                     logits.reshape(-1, logits.size(-1)),
                     target_labels.reshape(-1),
                 )
-                # TODO: (Label Smoothing) Replace plain CrossEntropy with label-smoothed CE (e.g., epsilon=0.1)
-                #       to improve generalization and calibration.
-                
-                # Setting gradients to None can save memory and may improve performance.
-                # However, if you are using the AdamW optimizer, be careful:
-                # AdamW's weight decay will skip parameters whose gradients are None,
-                # which could lead to incorrect training behavior.
-                # For most cases with Adam, this is safe and can be beneficial.
-                # For more details, see: https://pytorch.org/docs/stable/generated/torch.optim.Optimizer.zero_grad.html
-                self.optimizer.zero_grad(set_to_none=True)
 
+                # TODO: (Label Smoothing) Replace plain CrossEntropy with label-smoothed CE (e.g., epsilon=0.1)
+
+                self.optimizer.zero_grad(set_to_none=True)
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), 
-                                               getattr(self.config, "max_grad_norm", 1.0))
+                torch.nn.utils.clip_grad_norm_(
+                    self.model.parameters(),
+                    getattr(self.config, "max_grad_norm", 1.0)
+                )
                 self.optimizer.step()
 
                 self.global_step += 1
@@ -281,7 +283,6 @@ class Trainer:
             if isinstance(self.scheduler, optim.lr_scheduler.StepLR):
                 self.scheduler.step()
             # TODO: (Noam Scheduler) Optionally replace StepLR with Noam LR schedule
-            #       (warmup steps then inverse sqrt decay) for Transformer training.
 
             avg_loss = epoch_loss / max(1, len(self.train_dataloader))
             if avg_loss < self.best_loss:
@@ -291,12 +292,76 @@ class Trainer:
             if (epoch + 1) % self.save_interval == 0:
                 self._save_checkpoint(epoch, is_best=False)
 
-    # === Checkpointing and Logging ===
+    # =========================
+    # Validation and Prediction
+    # =========================
+
+    def _validate(self):
+        """Evaluates the model on the validation set.
+
+        Returns:
+            float: Average validation loss.
+        """
+        self.model.eval()
+        epoch_loss = 0.0
+        with torch.no_grad():
+            for batch in self.val_dataloader:
+                source, target = batch
+                source = source.to(self.device)
+                target = target.to(self.device)
+                target_in = target[:, :-1]
+                target_labels = target[:, 1:]
+                logits = self.model(source, target_in)
+                loss = self.criterion(
+                    logits.reshape(-1, logits.size(-1)),
+                    target_labels.reshape(-1)
+                )
+                self.validation_losses.append(loss.item())
+                epoch_loss += loss.item()
+        avg_loss = epoch_loss / max(1, len(self.val_dataloader))
+        return avg_loss
+
+    @torch.no_grad()
+    def _predict_batch(self, src_batch: torch.Tensor, max_len: int = 64) -> torch.Tensor:
+        """Generates predictions for a batch of source sentences.
+
+        Args:
+            src_batch (torch.Tensor): Batch of source sentences.
+            max_len (int): Maximum length of generated sequence.
+
+        Returns:
+            torch.Tensor: Generated target sequences.
+        """
+        self.model.eval()
+        src = src_batch.to(self.device)
+        bos = self.train_dataset.vocab_zh["<bos>"]
+        eos = self.train_dataset.vocab_zh["<eos>"]
+        tgt = torch.full((src.size(0), 1), bos, dtype=torch.long, device=self.device)
+        for _ in range(max_len):
+            logits = self.model(src, tgt)
+            # TODO: (Beam Search) Support beam search with length penalty; fall back to greedy.
+            next_id = logits[:, -1].argmax(dim=-1, keepdim=True)
+            tgt = torch.cat([tgt, next_id], dim=1)
+            if (next_id == eos).all():
+                break
+        return tgt
+
+    # =========================
+    # Checkpointing and Logging
+    # =========================
 
     def _save_checkpoint(self, epoch: int, is_best: bool = False):
-        """Save model, optimizer, and scheduler states."""
+        """Saves model, optimizer, and scheduler states.
+
+        Args:
+            epoch (int): Current epoch.
+            is_best (bool): Whether this is the best model so far.
+        """
         os.makedirs(self.best_model_path, exist_ok=True)
-        name = f"{self.best_model_name}_epoch{epoch}.pt" if not is_best else f"{self.best_model_name}_best.pt"
+        name = (
+            f"{self.best_model_name}_epoch{epoch}.pt"
+            if not is_best else f"{self.best_model_name}_best.pt"
+        )
         ckpt_path = os.path.join(self.best_model_path, name)
         torch.save({
             "model": self.model.state_dict(),
@@ -308,12 +373,22 @@ class Trainer:
         }, ckpt_path)
 
     def _log_training_progress(self, epoch: int, step: int, loss: float):
-        """Log the training progress."""
+        """Logs the training progress.
+
+        Args:
+            epoch (int): Current epoch.
+            step (int): Current step.
+            loss (float): Current loss.
+        """
         lr = self.optimizer.param_groups[0]["lr"]
         print(f"epoch={epoch} step={step} loss={loss:.4f} lr={lr:.2e}")
 
     def _load_checkpoint(self, path: str):
-        """Load model, optimizer, and scheduler states from checkpoint."""
+        """Loads model, optimizer, and scheduler states from checkpoint.
+
+        Args:
+            path (str): Path to checkpoint file.
+        """
         ckpt = torch.load(path, map_location=self.device)
         self.model.load_state_dict(ckpt["model"])
         if "optimizer" in ckpt and ckpt["optimizer"] is not None:
@@ -323,60 +398,29 @@ class Trainer:
         self.best_epoch = ckpt.get("epoch", 0)
         self.global_step = ckpt.get("global_step", 0)
 
-    # === Validation and Prediction ===
-    def _validate(self):
-        """Evaluate the model on the validation set."""
-        self.model.eval()
-        epoch_loss = 0.0
-        with torch.no_grad():
-            for batch in self.val_dataloader:
-                source, target = batch
-                source = source.to(self.device)
-                target = target.to(self.device)
-                target_in = target[:, :-1]
-                target_labels = target[:, 1:]
-                logits = self.model(source, target_in)
-                loss = self.criterion(logits.reshape(-1, logits.size(-1)), target_labels.reshape(-1))
-                self.validation_losses.append(loss.item())
-                epoch_loss += loss.item()
-        avg_loss = epoch_loss / max(1, len(self.val_dataloader))
-        return avg_loss
+    # =========================
+    # Plotting Methods
+    # =========================
 
-    @torch.no_grad()
-    def _predict_batch(self, src_batch: torch.Tensor, max_len: int = 64) -> torch.Tensor:
-        """Generate predictions for a batch of source sentences."""
-        self.model.eval()
-        src = src_batch.to(self.device)
-        bos = self.train_dataset.vocab_zh["<bos>"]
-        eos = self.train_dataset.vocab_zh["<eos>"]
-        tgt = torch.full((src.size(0), 1), bos, dtype=torch.long, device=self.device)
-        for _ in range(max_len):
-            logits = self.model(src, tgt)  # [B, t, V]
-            # TODO: (Beam Search) Support beam search with length penalty; fall back to greedy.
-            next_id = logits[:, -1].argmax(dim=-1, keepdim=True)
-            tgt = torch.cat([tgt, next_id], dim=1)
-            if (next_id == eos).all():
-                break
-        return tgt
-
-    # === Plotting ===
     def _plot_training_loss(self):
-        """Plot the training progress."""
+        """Plots the training loss curve."""
         plt.plot(self.training_losses)
         plt.xlabel("Epochs")
         plt.ylabel("Loss")
         plt.title("Training Loss")
-        plt.show()  
+        plt.show()
+
     def _plot_validation_loss(self):
-        """Plot the validation progress."""
+        """Plots the validation loss curve."""
         plt.plot(self.validation_losses)
         plt.xlabel("Epochs")
         plt.ylabel("Loss")
         plt.title("Validation Loss")
         plt.show()
 
-
-    # === Public API ===
+    # =========================
+    # Public API
+    # =========================
 
     def run(self):
         """Entry point to start training."""
@@ -384,13 +428,22 @@ class Trainer:
         self._plot_training_loss()
 
     def evaluate(self):
-        """Evaluate the model on the validation set."""
+        """Evaluates the model on the validation set and plots the loss."""
         self._validate()
         self._plot_validation_loss()
 
     def predict(self, src_batch: torch.Tensor, max_len: int = 64) -> torch.Tensor:
-        """Generate predictions for a batch of source sentences."""
+        """Generates predictions for a batch of source sentences.
+
+        Args:
+            src_batch (torch.Tensor): Batch of source sentences.
+            max_len (int): Maximum length of generated sequence.
+
+        Returns:
+            torch.Tensor: Generated target sequences.
+        """
         return self._predict_batch(src_batch, max_len)
+
 
 if __name__ == "__main__":
     # Example: run with default config dictionary
@@ -425,9 +478,7 @@ if __name__ == "__main__":
     trainer = Trainer(config)
     trainer.run()
 
-    
     print("Training finished.")
-
     print("Best model saved at:", trainer.best_model_path)
     print("Best model epoch:", trainer.best_epoch)
     print("Best model loss:", trainer.best_loss)
